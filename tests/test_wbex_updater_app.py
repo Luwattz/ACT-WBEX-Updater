@@ -752,7 +752,14 @@ def sample():
     window.after(10, sample)
 window.after(10, sample)
 window.after(50, lambda: ui.theme_switch.select('light'))
-window.after(900, window.quit)
+deadline = time.perf_counter() + 2
+def finish_when_ready():
+    if (ui.theme_mode.get() == 'light' and ui.theme_fade.timer_id is None) or time.perf_counter() > deadline:
+        colors.append(window.cget('background'))
+        window.quit()
+    else:
+        window.after(20, finish_when_ready)
+window.after(100, finish_when_ready)
 window.mainloop()
 print(json.dumps({'colors': colors, 'gap': max(gaps)}))
 ui.close()

@@ -894,7 +894,7 @@ class UpdaterApp:
         self.drop_zone.columnconfigure(0, weight=1)
         self.drop_zone.rowconfigure(0, weight=1)
         self.drop_zone.rowconfigure(1, weight=1)
-        self.drop_icon = ttk.Label(self.drop_zone, text="↓", style="Icon.Drop.LD.TLabel", cursor="hand2")
+        self.drop_icon = ttk.Label(self.drop_zone, text="+", style="Icon.Drop.LD.TLabel", cursor="hand2")
         self.drop_icon.grid(row=0, column=0, sticky="s")
         self.drop_title = ttk.Label(self.drop_zone, text="将 .wbex 文件拖到这里",
                                     style="Drop.LD.TLabel", cursor="hand2", wraplength=600)

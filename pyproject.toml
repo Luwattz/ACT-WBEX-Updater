@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "act-wbex-updater"
+version = "1.0.0"
+description = "Offline ACT WBEX extension updater for Windows"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{name = "Intelligent Efficiency Team"}]
+license = {text = "All rights reserved"}
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/Luwattz/ACT-WBEX-Updater"
+Issues = "https://github.com/Luwattz/ACT-WBEX-Updater/issues"
+
+[project.scripts]
+act-wbex-updater = "tools.wbex_updater_app:main"
+
+[tool.setuptools]
+packages = ["tools"]
+
+[tool.setuptools.package-data]
+tools = ["assets/wbex-updater/*.ico"]

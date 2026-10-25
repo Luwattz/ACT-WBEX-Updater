@@ -1,0 +1,2 @@
+# Copyright (c) 2026 Intelligent Efficiency Team. All rights reserved.
+"""ACT WBEX Updater by Intelligent Efficiency Team."""

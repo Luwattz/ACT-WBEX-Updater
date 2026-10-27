@@ -1,4 +1,5 @@
-# Copyright (c) 2026 Intelligent Efficiency Team. All rights reserved.
+# Copyright (c) 2026 Intelligent Efficiency Team
+# SPDX-License-Identifier: Apache-2.0
 """Build the standalone Windows WBEX updater; never package plugin sources.
 
 This is a developer tool. Both release layouts include Python and Tcl/Tk.

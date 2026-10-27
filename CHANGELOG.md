@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- License the project under the Apache License, Version 2.0.
+
 ## v1.0.0 — 2026-10-25
 
 - First independent release of ACT WBEX Updater by Intelligent Efficiency Team.

@@ -1,4 +1,5 @@
-# Copyright (c) 2026 Intelligent Efficiency Team. All rights reserved.
+# Copyright (c) 2026 Intelligent Efficiency Team
+# SPDX-License-Identifier: Apache-2.0
 """Product identity shared by the executable, CLI and build metadata."""
 
 VERSION = "1.0.0"

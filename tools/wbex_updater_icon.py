@@ -1,4 +1,5 @@
-# Copyright (c) 2026 Intelligent Efficiency Team. All rights reserved.
+# Copyright (c) 2026 Intelligent Efficiency Team
+# SPDX-License-Identifier: Apache-2.0
 """Load native-size window icons without Tk's ICO bitmap resampling."""
 from __future__ import annotations
 

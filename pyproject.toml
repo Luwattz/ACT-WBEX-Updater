@@ -9,7 +9,7 @@ description = "Offline ACT WBEX extension updater for Windows"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{name = "Intelligent Efficiency Team"}]
-license = {text = "All rights reserved"}
+license = {file = "LICENSE"}
 dependencies = []
 
 [project.urls]

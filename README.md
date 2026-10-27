@@ -62,4 +62,8 @@ python tools/build_wbex_updater.py --mode onefile
 
 EXE 的文件版本、产品版本为 **1.0.0**，开发公司及版权信息均为 **Intelligent Efficiency Team**。版本集中定义在 `tools/wbex_updater_version.py`。
 
-Copyright (c) 2026 Intelligent Efficiency Team. All rights reserved.
+## 许可证
+
+本项目采用 [Apache License 2.0](LICENSE) 许可证。
+
+Copyright (c) 2026 Intelligent Efficiency Team.

@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Intelligent Efficiency Team
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 """Replace user-installed ACT binary extensions without starting Workbench.
 
 The v241 native installer copies the WBEX and extracts its resource ZIPs into
@@ -36,6 +36,12 @@ except ImportError:
 
 class UpdateError(RuntimeError):
     pass
+
+
+class AnsysProcessesRunning(UpdateError):
+    def __init__(self, names):
+        self.names = tuple(names)
+        super().__init__("Close Workbench/Mechanical/SpaceClaim before updating: " + ", ".join(self.names))
 
 
 MAX_PACKAGE_BYTES = 1024 * 1024 * 1024
@@ -176,7 +182,7 @@ def inspect_package(path):
     return Package(path, name, guid, shortid, major, minor, files, payload)
 
 
-def active_ansys_processes():
+def _ansys_process_entries():
     if os.name != "nt":
         raise UpdateError("The ACT updater must run on Windows.")
     from ctypes import wintypes
@@ -200,20 +206,80 @@ def active_ansys_processes():
     snapshot = kernel.CreateToolhelp32Snapshot(0x2, 0)  # TH32CS_SNAPPROCESS
     if snapshot == ctypes.c_void_p(-1).value:
         raise UpdateError("Cannot check running Ansys processes: " + str(ctypes.WinError(ctypes.get_last_error())))
-    names = set()
+    processes = []
     try:
         entry = ProcessEntry()
         entry.dwSize = ctypes.sizeof(entry)
         success = kernel.Process32FirstW(snapshot, ctypes.byref(entry))
         while success:
             if entry.szExeFile.casefold() in HOST_NAMES:
-                names.add(entry.szExeFile)
+                processes.append((entry.th32ProcessID, entry.szExeFile))
             success = kernel.Process32NextW(snapshot, ctypes.byref(entry))
         if ctypes.get_last_error() != 18:  # ERROR_NO_MORE_FILES
             raise UpdateError("Process enumeration failed: " + str(ctypes.WinError(ctypes.get_last_error())))
-        return sorted(names)
+        return processes
     finally:
         kernel.CloseHandle(snapshot)
+
+
+def active_ansys_processes():
+    return sorted({name for _, name in _ansys_process_entries()})
+
+
+def _terminate_ansys_process(pid, name):
+    """Terminate one verified host by handle, avoiding PID reuse after opening."""
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD,
+                                                wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+    kernel.QueryFullProcessImageNameW.restype = wintypes.BOOL
+    kernel.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+    kernel.TerminateProcess.restype = wintypes.BOOL
+    kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    # PROCESS_TERMINATE | PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE
+    handle = kernel.OpenProcess(0x00101001, False, pid)
+    if not handle:
+        if ctypes.get_last_error() == 87:  # Already exited: ERROR_INVALID_PARAMETER
+            return
+        raise UpdateError("Cannot close Ansys processes: " + name + ": " +
+                          str(ctypes.WinError(ctypes.get_last_error())))
+    try:
+        if kernel.WaitForSingleObject(handle, 0) == 0:
+            return
+        image = ctypes.create_unicode_buffer(32768)
+        length = wintypes.DWORD(len(image))
+        if not kernel.QueryFullProcessImageNameW(handle, 0, image, ctypes.byref(length)):
+            if kernel.WaitForSingleObject(handle, 0) == 0:
+                return
+            raise UpdateError("Cannot close Ansys processes: cannot verify " + name)
+        if Path(image.value).name.casefold() != name.casefold():
+            raise UpdateError("Cannot close Ansys processes: process identity changed for " + name)
+        if not kernel.TerminateProcess(handle, 1) and kernel.WaitForSingleObject(handle, 0) != 0:
+            raise UpdateError("Cannot close Ansys processes: " + name + ": " +
+                              str(ctypes.WinError(ctypes.get_last_error())))
+        if kernel.WaitForSingleObject(handle, 5000) != 0:
+            raise UpdateError("Cannot close Ansys processes: timed out waiting for " + name)
+    finally:
+        kernel.CloseHandle(handle)
+
+
+def close_ansys_processes(approved_names):
+    """Only close allowlisted host names explicitly approved by the GUI user."""
+    approved = {name.casefold() for name in approved_names}
+    if not approved or not approved <= HOST_NAMES:
+        raise UpdateError("Cannot close Ansys processes: unapproved process name.")
+    for pid, name in _ansys_process_entries():
+        if name.casefold() in approved:
+            _terminate_ansys_process(pid, name)
+    running = active_ansys_processes()
+    if running:
+        raise AnsysProcessesRunning(running)
 
 
 def _read_xml(path):
@@ -382,7 +448,7 @@ def update(package_path, ansys_root=None, profile_dir=None, preferences_file=Non
         return report
     running = active_ansys_processes()
     if running:
-        raise UpdateError("Close Workbench/Mechanical/SpaceClaim before updating: " + ", ".join(running))
+        raise AnsysProcessesRunning(running)
     act = profile / "ACT"
     _assert_plain(act / "extension_update_backups")
     act.mkdir(parents=True, exist_ok=True)

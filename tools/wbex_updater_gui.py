@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Intelligent Efficiency Team
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 #!/usr/bin/env python3
 """Dependency-free desktop front end for the offline ACT WBEX updater."""
 
@@ -25,13 +25,13 @@ try:
     from .wbex_updater_drop import WindowsFileDrop
     from .wbex_updater_icon import WindowsWindowIcons
     from .wbex_updater_runtime import BuildError, discover_ansys_roots, select_default_ansys_root
-    from .update_wbex import update
+    from .update_wbex import update, AnsysProcessesRunning, close_ansys_processes
 except ImportError:
     from wbex_updater_version import VERSION, APP_ID
     from wbex_updater_drop import WindowsFileDrop
     from wbex_updater_icon import WindowsWindowIcons
     from wbex_updater_runtime import BuildError, discover_ansys_roots, select_default_ansys_root
-    from update_wbex import update
+    from update_wbex import update, AnsysProcessesRunning, close_ansys_processes
 
 
 ROOT = (Path(sys.executable).resolve().parent if getattr(sys, "frozen", False)
@@ -804,6 +804,9 @@ def explain_failure(raw):
     if "same guid" in text and "additional extension" in text:
         return ("检测到同一插件的源码开发版，与安装包冲突。",
                 "请在 Ansys 的 Additional Extension Folders 中移除对应开发路径，再重试；无需删除源码。")
+    if "cannot close ansys processes" in text:
+        return ("无法强制关闭相关 Ansys 进程，更新已停止。",
+                "请手动关闭列出的程序；若权限不足，请使用与 Ansys 相同的权限运行更新器后重试。")
     if any(part in text for part in ("close workbench", "workbench is running", "application started during staging")):
         return ("Workbench、Mechanical 或 SpaceClaim 仍在运行。",
                 "请保存工作并关闭这些程序，然后重试。")
@@ -1160,14 +1163,45 @@ class UpdaterApp:
         threading.Thread(target=self.update_worker, args=(options,), daemon=True).start()
 
     def update_worker(self, options):
+        options = dict(options)
+        approved = options.pop("_close_processes", ())
         try:
+            if approved and not options.get("dry_run", False):
+                close_ansys_processes(approved)
+                self.events.put(("line", "已关闭用户确认的 Ansys 进程，正在重新检查并更新。\n"))
             # The engine is bundled with the app. Never launch python.exe or
             # look for a neighboring tools directory on the user's machine.
             result = update(**options, notify=lambda text: self.events.put(("line", str(text) + "\n")))
             self.events.put(("result", result))
             self.events.put(("done", 0))
+        except AnsysProcessesRunning as exc:
+            if options.get("dry_run", False):
+                self.events.put(("error", str(exc)))
+            else:
+                self.events.put(("processes_running", (exc.names, options)))
         except Exception as exc:
             self.events.put(("error", "%s: %s" % (type(exc).__name__, exc)))
+
+    def confirm_close_processes(self, names, options):
+        # Dialogs run on the Tk thread; termination and the full retry run on a worker.
+        self.progress.stop()
+        self.status.set("等待确认是否强制关闭 Ansys 进程。")
+        confirmed = messagebox.askyesno(
+            "强制关闭 Ansys 并继续更新？",
+            "以下进程仍在运行：\n\n" + "\n".join(names) +
+            "\n\n强制关闭可能导致未保存的工作或计算结果丢失。\n"
+            "选择“是”：强制关闭列出的进程，并继续更新 .wbex。\n"
+            "选择“否”：取消本次更新，请保存工作并手动关闭后重试。",
+            default=messagebox.NO, icon=messagebox.WARNING, parent=self.window)
+        if not confirmed:
+            self.finish(2)
+            return
+        self.details.append("用户同意强制关闭：" + ", ".join(names))
+        self.status.set("正在关闭 Ansys 进程，随后继续更新。")
+        if self.motion_enabled:
+            self.progress.start(12)
+        retry = dict(options, _close_processes=tuple(names))
+        threading.Thread(target=self.update_worker, args=(retry,), daemon=True).start()
 
     def drain_events(self):
         for _ in range(200):
@@ -1208,6 +1242,8 @@ class UpdaterApp:
             elif event == "line":
                 self.details.append(str(value).rstrip())
                 self.show_progress(str(value).strip())
+            elif event == "processes_running":
+                self.confirm_close_processes(*value)
             elif event == "result":
                 self.last_result = value
                 self.details.append(json.dumps(value, ensure_ascii=False, indent=2))
@@ -1293,7 +1329,12 @@ class UpdaterApp:
             control.configure(state="normal")
         self.check_button.configure(text="检查（不更改）")
         self.update_button.configure(text="更新并设为默认")
-        if returncode == 0:
+        if returncode == 2:
+            self.set_state("更新已取消", "Ready")
+            self.status.set("已取消更新，插件和配置未更改。")
+            self.next_step.set("请保存工作并手动关闭 Ansys 后重试。")
+            self.append("【更新已取消】用户未同意强制关闭进程。\n")
+        elif returncode == 0:
             if self.dry_run:
                 self.set_state("检查成功", "Success")
                 self.status.set("插件包和安装条件检查通过，本次未更改任何文件。")

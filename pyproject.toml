@@ -4,12 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "act-wbex-updater"
-version = "1.0.0"
+version = "1.1.0"
 description = "Offline ACT WBEX extension updater for Windows"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [{name = "Intelligent Efficiency Team"}]
 license = {file = "LICENSE"}
+classifiers = ["License :: OSI Approved :: MIT License"]
 dependencies = []
 
 [project.urls]

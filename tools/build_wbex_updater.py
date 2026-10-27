@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Intelligent Efficiency Team
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 """Build the standalone Windows WBEX updater; never package plugin sources.
 
 This is a developer tool. Both release layouts include Python and Tcl/Tk.
@@ -134,6 +134,7 @@ def pyinstaller_command(staged_tools: Path, temporary_root: Path, mode="onedir")
         "--version-file", str(temporary_root / "version-info.txt"),
         "--icon", str(staged_tools / "assets" / "wbex-updater" / "updater.ico"),
         "--add-data", str(staged_tools / "assets" / "wbex-updater" / "updater.ico") + os.pathsep + "updater_assets",
+        "--add-data", str(temporary_root / "LICENSE.txt") + os.pathsep + "updater_assets",
         # PyInstaller 6.16 embeds inline XML in a single-quoted spec literal.
         "--manifest", DPI_MANIFEST.replace("\n", ""),
         "--paths", str(staged_tools),
@@ -245,6 +246,8 @@ def build_standalone(output_dir: Path = None, mode="onedir"):
         staged_tools = temporary_root / "source" / "tools"
         stage_runtime(ROOT / "tools", staged_tools)
         write_version_info(temporary_root / "version-info.txt")
+        license_file = temporary_root / "LICENSE.txt"
+        shutil.copyfile(ROOT / "LICENSE", license_file)
         env = dict(os.environ)
         # Avoid inherited repository paths affecting PyInstaller's import graph.
         env.pop("PYTHONPATH", None)
@@ -267,6 +270,7 @@ def build_standalone(output_dir: Path = None, mode="onedir"):
         usage.write_text(FOLDER_USAGE if mode == "onedir" else USAGE, encoding="utf-8-sig")
         if mode == "onedir":
             shutil.copyfile(usage, release / usage.name)
+            shutil.copyfile(license_file, release / license_file.name)
             archive = shutil.make_archive(str(temporary_root / EXE_NAME), "zip",
                                           root_dir=release.parent, base_dir=EXE_NAME)
             publish_folder(release, output_dir / EXE_NAME)
@@ -274,6 +278,7 @@ def build_standalone(output_dir: Path = None, mode="onedir"):
         else:
             publish_file(executable, output_dir / executable.name)
             publish_file(usage, output_dir / usage.name)
+            publish_file(license_file, output_dir / license_file.name)
     result_path = output_dir / EXE_NAME / (EXE_NAME + ".exe") if mode == "onedir" else output_dir / (EXE_NAME + ".exe")
     notify_shell_update(result_path)
     print("Standalone updater: " + str(result_path))

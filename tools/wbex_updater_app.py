@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Intelligent Efficiency Team
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 """Single executable entry point for the ACT WBEX updater."""
 from __future__ import annotations
 

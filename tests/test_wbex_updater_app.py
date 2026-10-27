@@ -500,6 +500,82 @@ class StandaloneUpdaterGuiTests(unittest.TestCase):
         self.error_dialog.assert_called_once()
         self.assertIn("请保存工作并关闭", window_app.next_step.get())
 
+    def test_user_consent_closes_hosts_then_retries_original_update(self):
+        window_app = gui.UpdaterApp(self.window, root=self.root)
+        names = ("AnsysWBU.exe",)
+        options = {"package_path": str(self.package), "ansys_root": "custom/v241", "dry_run": False}
+        calls = []
+
+        def update(**kwargs):
+            calls.append("update")
+            self.assertEqual("custom/v241", kwargs["ansys_root"])
+            self.assertNotIn("_close_processes", kwargs)
+            if len(calls) == 1:
+                raise engine.AnsysProcessesRunning(names)
+            return {"backup": "backup-path"}
+
+        def immediate_thread(*, target, args, daemon):
+            return Mock(start=lambda: target(*args))
+
+        window_app.busy = True
+        window_app.dry_run = False
+        with patch.object(gui, "update", side_effect=update), \
+                patch.object(gui, "close_ansys_processes", side_effect=lambda approved: calls.append("close")) as close, \
+                patch.object(gui.messagebox, "askyesno", return_value=True) as confirm, \
+                patch.object(gui.threading, "Thread", side_effect=immediate_thread):
+            window_app.update_worker(options)
+            confirm.assert_not_called()  # Worker only queues a request for the Tk thread.
+            window_app.drain_events()
+        self.assertEqual(["update", "close", "update"], calls)
+        close.assert_called_once_with(names)
+        self.assertIn("未保存", confirm.call_args.args[1])
+        self.assertIn(names[0], confirm.call_args.args[1])
+        self.assertEqual(gui.messagebox.NO, confirm.call_args.kwargs["default"])
+        self.assertFalse(window_app.busy)
+        self.assertEqual("更新成功", window_app.state_title.get())
+
+    def test_declining_closure_cancels_without_closing_or_retrying(self):
+        window_app = gui.UpdaterApp(self.window, root=self.root)
+        window_app.busy = True
+        window_app.dry_run = False
+        with patch.object(gui, "update", side_effect=engine.AnsysProcessesRunning(["SpaceClaim.exe"])) as update, \
+                patch.object(gui, "close_ansys_processes") as close, \
+                patch.object(gui.messagebox, "askyesno", return_value=False):
+            window_app.update_worker({"package_path": str(self.package), "dry_run": False})
+            window_app.drain_events()
+        update.assert_called_once()
+        close.assert_not_called()
+        self.assertEqual("更新已取消", window_app.state_title.get())
+        self.assertFalse(window_app.busy)
+        self.assertTrue(all(str(control.cget("state")) == "normal" for control in window_app.controls))
+        self.error_dialog.assert_not_called()
+
+    def test_closure_failure_stops_before_retry_and_restores_controls(self):
+        window_app = gui.UpdaterApp(self.window, root=self.root)
+        window_app.busy = True
+        window_app.dry_run = False
+        with patch.object(gui, "close_ansys_processes", side_effect=engine.UpdateError(
+                "Cannot close Ansys processes: access denied")), patch.object(gui, "update") as update:
+            window_app.update_worker({"package_path": str(self.package), "dry_run": False,
+                                      "_close_processes": ("AnsysWBU.exe",)})
+            window_app.drain_events()
+        update.assert_not_called()
+        self.assertFalse(window_app.busy)
+        self.assertIn("无法强制关闭", window_app.status.get())
+        self.error_dialog.assert_called_once()
+
+    def test_check_only_never_closes_processes_or_requests_consent(self):
+        window_app = gui.UpdaterApp(self.window, root=self.root)
+        window_app.dry_run = True
+        with patch.object(gui, "update", return_value={"dry_run": True}), \
+                patch.object(gui, "close_ansys_processes") as close, \
+                patch.object(gui.messagebox, "askyesno") as confirm:
+            window_app.update_worker({"package_path": str(self.package), "dry_run": True,
+                                      "_close_processes": ("AnsysWBU.exe",)})
+            window_app.drain_events()
+        close.assert_not_called()
+        confirm.assert_not_called()
+
     def test_update_success_shows_result_and_backup_without_json(self):
         window_app = gui.UpdaterApp(self.window, root=self.root)
         window_app.events.put(("line", "Package: LumiDynaLite 1.9 / private-guid\n"))

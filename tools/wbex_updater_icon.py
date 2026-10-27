@@ -1,5 +1,5 @@
 # Copyright (c) 2026 Intelligent Efficiency Team
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: MIT
 """Load native-size window icons without Tk's ICO bitmap resampling."""
 from __future__ import annotations
 

@@ -17,7 +17,7 @@ class ProductMetadataTests(unittest.TestCase):
         with redirect_stdout(output), self.assertRaises(SystemExit) as result:
             app.main(["--version"])
         self.assertEqual(0, result.exception.code)
-        self.assertIn("1.0.0", output.getvalue())
+        self.assertIn("1.1.0", output.getvalue())
         self.assertIn("Intelligent Efficiency Team", output.getvalue())
 
     def test_windows_version_resource_contains_release_identity(self):
@@ -28,7 +28,7 @@ class ProductMetadataTests(unittest.TestCase):
             calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)]
             fixed = next(node for node in calls if getattr(node.func, "id", "") == "FixedFileInfo")
             versions = {entry.arg: ast.literal_eval(entry.value) for entry in fixed.keywords}
-            self.assertEqual((1, 0, 0, 0), versions["filevers"])
+            self.assertEqual((1, 1, 0, 0), versions["filevers"])
             strings = {ast.literal_eval(node.args[0]): ast.literal_eval(node.args[1])
                        for node in calls if getattr(node.func, "id", "") == "StringStruct"}
             self.assertEqual(product.COMPANY, strings["CompanyName"])

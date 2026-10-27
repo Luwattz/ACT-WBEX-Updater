@@ -2,7 +2,7 @@
 
 <img src="tools/assets/wbex-updater/updater.png" width="96" alt="ACT WBEX Updater icon">
 
-**v1.0.0 · Intelligent Efficiency Team**
+**v1.1.0 · Intelligent Efficiency Team**
 
 独立的 Windows ACT `.wbex` 插件更新器。无需启动 Workbench，即可备份并替换当前用户已安装的同 GUID 插件，并设置 **Load as default**。用户不需要安装 Python，也不需要插件源码。
 
@@ -60,10 +60,10 @@ python tools/build_wbex_updater.py --mode onefile
 
 也可双击 `Build.cmd`，默认构建文件夹版。构建器只暂存白名单中的运行脚本和 ICO，不依赖任何 LumiDyna 仓库、WBEX 编译器或插件源码。`tools/update_wbex.py` 中的已知 GUID 身份校验是历史包的兼容保护，不需要对应源码。
 
-EXE 的文件版本、产品版本为 **1.0.0**，开发公司及版权信息均为 **Intelligent Efficiency Team**。版本集中定义在 `tools/wbex_updater_version.py`。
+EXE 的文件版本、产品版本为 **1.1.0**，开发公司及版权信息均为 **Intelligent Efficiency Team**。版本集中定义在 `tools/wbex_updater_version.py`。
 
 ## 许可证
 
-本项目采用 [Apache License 2.0](LICENSE) 许可证。
+本项目采用 [MIT License](LICENSE) 许可证。
 
 Copyright (c) 2026 Intelligent Efficiency Team.

@@ -425,8 +425,9 @@ class WbexUpdaterTests(unittest.TestCase):
         package = self.package()
         before = self.snapshot(self.profile)
         with patch.object(updater, "active_ansys_processes", return_value=["AnsysWBU.exe"]):
-            with self.assertRaises(updater.UpdateError):
+            with self.assertRaises(updater.AnsysProcessesRunning) as raised:
                 self.run_update(package)
+        self.assertEqual(("AnsysWBU.exe",), raised.exception.names)
         self.assertEqual(before, self.snapshot(self.profile))
 
     def test_preference_commit_failure_rolls_back_packages_resources_and_preferences(self):

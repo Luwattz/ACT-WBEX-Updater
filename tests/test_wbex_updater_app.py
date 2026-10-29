@@ -776,6 +776,35 @@ class StandaloneUpdaterGuiTests(unittest.TestCase):
         self.assertEqual(str(self.package), window_app.package.get())
         self.assertIn("未更改安装包", window_app.log_text)
 
+    def test_drag_hover_state_survives_themes_and_clears_on_leave_drop_and_busy(self):
+        window_app = gui.UpdaterApp(self.window, root=self.root)
+        images = len(self.window._ld_theme_images)
+        window_app.events.put(("drag_hover", True))
+        window_app.drain_events()
+        self.assertIn("active", window_app.drop_zone.state())
+        self.assertEqual(str(self.package), window_app.package.get())
+        with patch.object(gui.tk, "PhotoImage", side_effect=AssertionError("hover allocates a bitmap")):
+            for mode in ("light", "dark"):
+                window_app.theme_fade.to(mode, animate=False)
+                self.assertIn("active", window_app.drop_zone.state())
+            window_app.theme_fade.render(0.5)
+            self.assertIn("active", window_app.drop_zone.state())
+            window_app.events.put(("drag_hover", False))
+            window_app.drain_events()
+            self.assertNotIn("active", window_app.drop_zone.state())
+            window_app.set_drag_hover(True)
+            window_app.accept_drop({"count": 1, "paths": [str(self.package)], "busy": False})
+            self.assertNotIn("active", window_app.drop_zone.state())
+        self.assertEqual(images, len(self.window._ld_theme_images))
+        window_app.set_drag_hover(True)
+        window_app.ansys_root.set("custom/v241")
+        with patch.object(gui.threading, "Thread"):
+            window_app.start(dry_run=True)
+        self.assertNotIn("active", window_app.drop_zone.state())
+        window_app.events.put(("drag_hover", True))
+        window_app.drain_events()
+        self.assertNotIn("active", window_app.drop_zone.state())
+
     def test_visible_repainting_does_not_starve_timers(self):
         # Isolate a real native-DPI event loop from the other hidden Tcl roots.
         script = """

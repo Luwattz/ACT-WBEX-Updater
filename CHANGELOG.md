@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Highlight the drop-zone border while a single WBEX file is dragged over it;
+  clear the highlight on leave, cancellation, drop or when an update starts.
+
 ## v1.1.0 — 2026-10-27
 
 - License the project under the MIT License.

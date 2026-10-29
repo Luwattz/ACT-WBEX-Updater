@@ -501,6 +501,7 @@ def configure_theme(window, mode="dark", palette=None, logical_mode=None):
                          padding=0, sticky="nswe")
     style.layout("Card.LD.TFrame", [("LD.Card.surface", {"sticky": "nswe"})])
     style.element_create("LD.Drop.surface", "image", surface(c["drop"], c["drop_border"], 12),
+                         ("active", surface(c["drop"], c["drop_text"], 12)),
                          border=p(12) + 1, width=p(12) * 2 + 4, height=p(12) * 2 + 4,
                          padding=0, sticky="nswe")
     style.layout("Drop.LD.TFrame", [("LD.Drop.surface", {"sticky": "nswe"})])
@@ -960,7 +961,8 @@ class UpdaterApp:
                 self.drop_target.refresh()
             else:
                 self.drop_target = WindowsFileDrop(self.window, self.events, lambda: self.busy,
-                                                extra_windows=(self.package_entry, self.drop_zone, self.drop_title, self.drop_icon))
+                                                extra_windows=(self.package_entry, self.drop_zone, self.drop_title, self.drop_icon),
+                                                hover_window=self.drop_zone)
         except (OSError, AttributeError) as error:
             self.details.append("拖放未能启用，可继续使用浏览按钮：{}".format(error))
 
@@ -968,7 +970,11 @@ class UpdaterApp:
         if event.widget is self.window:
             self.window.after_idle(self.enable_file_drop)
 
+    def set_drag_hover(self, active):
+        self.drop_zone.state(["active"] if active and not self.busy else ["!active"])
+
     def accept_drop(self, payload):
+        self.set_drag_hover(False)
         if payload.get("busy") or self.busy:
             self.append("操作进行中，未更改安装包。请在操作结束后重新拖入。\n")
             messagebox.showinfo("操作进行中", "本次拖入未更改安装包，请在操作结束后重新拖入。", parent=self.window)
@@ -1141,6 +1147,7 @@ class UpdaterApp:
             options["ansys_root"] = ansys
 
         self.busy = True
+        self.set_drag_hover(False)
         self.failure_message = ""
         self.failure_advice = ""
         self.failure_raw = ""
@@ -1230,9 +1237,12 @@ class UpdaterApp:
                 self.append("自动检测未完成，请手动选择插件包和 Ansys 安装目录。\n")
                 self._ansys_path_changed()
                 messagebox.showwarning("自动检测未完成", "请手动选择插件包和 Ansys 安装目录。", parent=self.window)
+            elif event == "drag_hover":
+                self.set_drag_hover(value)
             elif event == "drop":
                 self.accept_drop(value)
             elif event == "drop_error":
+                self.set_drag_hover(False)
                 self.details.append("文件拖放失败：{}".format(value))
                 if not self.busy:
                     self.set_state("未能读取拖入的文件", "Error")

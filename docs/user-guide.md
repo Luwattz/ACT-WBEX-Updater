@@ -1,4 +1,4 @@
-# ACT WBEX Updater v1.1.0
+# ACT WBEX Updater v1.2.0
 
 Intelligent Efficiency Team · Copyright (c) 2026 Intelligent Efficiency Team
 

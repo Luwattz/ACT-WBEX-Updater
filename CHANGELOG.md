@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0 — 2026-11-02
 
 - Highlight the drop-zone border while a single WBEX file is dragged over it;
   clear the highlight on leave, cancellation, drop or when an update starts.

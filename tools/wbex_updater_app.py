@@ -26,11 +26,19 @@ def main(argv=None):
     parser.add_argument("--headless", action="store_true", help="Run without a window; requires --report")
     parser.add_argument("--report", help="Write the headless result/log to this JSON file")
     parser.add_argument("--self-check", metavar="REPORT", help="Check the bundled GUI/runtime without installing anything")
+    parser.add_argument("--export-licenses", metavar="DIRECTORY", help="Export bundled licenses without opening a window")
     parser.add_argument("--ansys-root")
     parser.add_argument("--profile-dir")
     parser.add_argument("--preferences-file")
     parser.add_argument("--dry-run", action="store_true")
     options = parser.parse_args(argv)
+    if options.export_licenses:
+        try:
+            from .wbex_updater_licenses import export_licenses
+        except ImportError:
+            from wbex_updater_licenses import export_licenses
+        export_licenses(options.export_licenses)
+        return 0
     if options.self_check:
         try:
             from .wbex_updater_gui import UpdaterApp, ROOT, create_window
@@ -59,6 +67,13 @@ def main(argv=None):
                       "startup_log": app.log_text,
                       "technical_details": "\n".join(app.details),
                       "source_tools_required": False}
+            try:
+                from .wbex_updater_licenses import license_text
+            except ImportError:
+                from wbex_updater_licenses import license_text
+            notices = license_text()
+            result["third_party_notices_present"] = all(
+                name in notices for name in ("OpenSSL", "Python Software Foundation", "Bootloader Exception"))
             Path(options.self_check).resolve().write_text(
                 json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
         finally:

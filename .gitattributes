@@ -1,0 +1,3 @@
+# Keep upstream license bytes stable, including on Windows checkouts.
+LICENSE -text
+tools/legal/** -text

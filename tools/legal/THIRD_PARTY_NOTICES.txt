@@ -1,0 +1,84 @@
+ACT WBEX Updater - Third-party notices
+======================================
+
+ACT WBEX Updater is Copyright (c) 2026 Intelligent Efficiency Team.
+The application's own code is licensed under the MIT License (LICENSE.txt).
+Third-party components retain their own licenses and copyrights below.
+The application's MIT license does not replace any third-party license.
+
+This distribution includes Python and libraries bundled with Python, together
+with PyInstaller's bootloader, loader and selected runtime hooks. Some libraries
+are packaged because of Python's dependency graph even if the updater does not
+use every feature. Names below identify upstream projects, not endorsements.
+
+Component                 Reference build version  License / accompanying file
+------------------------  -----------------------  ----------------------------
+CPython and standard lib  3.13.15                  PSF 2 and historical licenses
+  licenses/Python-LICENSE.txt
+  licenses/Python-THIRD-PARTY.txt
+  licenses/Python-installed-LICENSE.txt (collected during standalone build)
+  Preserve original Python notices. No modifications are made to CPython itself.
+  Python-THIRD-PARTY.txt preserves upstream documentation-source acknowledgements
+  for incorporated software, in addition to the actual installed Python license.
+Tcl                       8.6.15                   Tcl/Tk License
+  licenses/Tcl-license.terms.txt
+Tk                        8.6.15                   Tcl/Tk License
+  licenses/Tk-license.terms.txt
+OpenSSL                   3.0.21                   Apache License 2.0
+  licenses/OpenSSL-LICENSE.txt
+libffi                    3.4.4                    MIT License
+  licenses/libffi-LICENSE.txt
+zlib                      1.3.1                    zlib License
+  licenses/zlib-LICENSE.txt
+Expat                     2.8.2                    MIT License
+  licenses/Expat-COPYING.txt
+libbzip2                  1.0.8                    bzip2 License
+  licenses/bzip2-LICENSE.txt
+libmpdec                  4.0.0                    BSD 2-Clause License
+  licenses/mpdecimal-COPYRIGHT.txt
+liblzma (XZ Utils)        5.2.5                    Public domain library code
+  licenses/XZ-COPYING.txt
+  The GPL/LGPL descriptions in XZ's upstream COPYING concern other parts of
+  that source distribution. Python's _lzma bundles the library, not XZ's
+  command-line scripts or build system.
+PyInstaller               6.16.0                   GPL 2-or-later with
+                                                  Bootloader Exception;
+                                                  Apache 2.0 runtime hooks
+  licenses/PyInstaller-COPYING.txt
+  licenses/Apache-2.0.txt
+  The explicit exception permits distributing applications with PyInstaller's
+  compiled bootloader and related loader code under the application's license.
+  This does not relicense PyInstaller itself. Upstream runtime hooks (inspect
+  and tkinter in the reference build) use Apache License 2.0.
+  No modifications are made to PyInstaller itself.
+
+Versions above describe the pinned Windows release build. BUILD-INFO.json in
+standalone distributions records actual Python, Tcl/Tk and PyInstaller versions
+and original license hashes. If building with different dependencies, review and
+update this inventory and version-specific original license texts.
+licenses/SOURCES.json records upstream URLs and SHA-256 hashes for the original
+license files, retained without rewriting the authors' notices.
+
+Microsoft runtime components
+----------------------------
+Windows distributions may include Microsoft Visual C++/Universal CRT files
+(VCRUNTIME*, ucrtbase.dll and api-ms-win-*). These Microsoft components are not
+covered by this application's MIT license. Redistribution is subject to applicable
+Microsoft terms and the Python Windows distribution's terms. Existing copyright
+and embedded version-resource notices remain intact.
+
+Build and artwork tools (not bundled as application dependencies)
+---------------------------------------------------------------
+setuptools is a build backend licensed under MIT. Pillow was used for icon format
+conversion and is licensed under MIT-CMU. They are not updater runtime requirements.
+The application icon was generated specifically for this project, not obtained
+from a third-party icon library. A build tool's dependencies are not represented
+as runtime components merely because that tool was used.
+
+Access to these notices
+----------------------
+Use the application's "许可证" button to read and save all bundled notices.
+--export-licenses DIRECTORY exports the same files without opening a window.
+ZIP releases also contain THIRD_PARTY_NOTICES.txt, LICENSE.txt and licenses/
+next to the executable. Single-file releases embed the texts in the executable;
+access does not require Internet connectivity.

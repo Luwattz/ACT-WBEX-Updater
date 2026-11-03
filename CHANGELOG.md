@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.1 — 2026-11-03
+
+- Include original third-party licenses, copyrights and source provenance in
+  both standalone layouts and Python packages; retain the application's MIT license.
+- Add an offline license viewer with save support and --export-licenses for
+  standalone executables, including single-file distributions.
+- Pin the audited Windows build to Python 3.13.15 / PyInstaller 6.16.0 and publish
+  only after tests, executable metadata checks and both layouts' self-checks pass.
+
 ## v1.2.0 — 2026-11-02
 
 - Highlight the drop-zone border while a single WBEX file is dragged over it;

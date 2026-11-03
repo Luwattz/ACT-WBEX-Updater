@@ -2,7 +2,7 @@
 
 <img src="tools/assets/wbex-updater/updater.png" width="96" alt="ACT WBEX Updater icon">
 
-**v1.2.0 · Intelligent Efficiency Team**
+**v1.2.1 · Intelligent Efficiency Team**
 
 独立的 Windows ACT `.wbex` 插件更新器。无需启动 Workbench，即可备份并替换当前用户已安装的同 GUID 插件，并设置 **Load as default**。用户不需要安装 Python，也不需要插件源码。
 
@@ -60,10 +60,19 @@ python tools/build_wbex_updater.py --mode onefile
 
 也可双击 `Build.cmd`，默认构建文件夹版。构建器只暂存白名单中的运行脚本和 ICO，不依赖任何 LumiDyna 仓库、WBEX 编译器或插件源码。`tools/update_wbex.py` 中的已知 GUID 身份校验是历史包的兼容保护，不需要对应源码。
 
-EXE 的文件版本、产品版本为 **1.2.0**，开发公司及版权信息均为 **Intelligent Efficiency Team**。版本集中定义在 `tools/wbex_updater_version.py`。
+EXE 的文件版本、产品版本为 **1.2.1**，开发公司及版权信息均为 **Intelligent Efficiency Team**。版本集中定义在 `tools/wbex_updater_version.py`。
 
 ## 许可证
 
 本项目采用 [MIT License](LICENSE) 许可证。
 
 Copyright (c) 2026 Intelligent Efficiency Team.
+
+第三方组件保留各自的许可证，见[第三方声明](tools/legal/THIRD_PARTY_NOTICES.txt)。
+窗口右上角“许可证”可离线查看并保存全部声明，单文件 EXE 也包含这些文本。
+也可运行 `ACT_WBEX_Updater.exe --export-licenses <新目录>` 导出；源码运行使用
+`python tools/wbex_updater_app.py --export-licenses <新目录>`。
+ZIP 中同时提供 `licenses/`、`THIRD_PARTY_NOTICES.txt` 和 `BUILD-INFO.json`。
+
+正式 Windows 构建使用 Python 3.13.15 和 requirements-dev.txt 锁定的 PyInstaller；
+更换运行库版本前需重新核对许可证和组件清单。

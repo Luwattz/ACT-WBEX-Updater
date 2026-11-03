@@ -889,6 +889,8 @@ class UpdaterApp:
         header = ttk.Frame(frame, style="LD.TFrame")
         header.grid(row=0, column=0, sticky="ew", pady=(0, 18))
         header.columnconfigure(0, weight=1)
+        ttk.Button(header, text="许可证", command=self.show_licenses, style="LD.TButton").grid(
+            row=0, column=2, sticky="e", padx=(12, 0))
         ttk.Label(header, text="ACT 插件更新", style="Title.LD.TLabel").grid(
             row=0, column=0, sticky="w")
         self.theme_switch = ThemeSwitch(header, self.theme_mode, self.change_theme, self.motion_enabled)
@@ -1292,6 +1294,38 @@ class UpdaterApp:
                         "正在备份旧版本、安装新插件并设置默认加载…\n")
         elif text.startswith("Could not remove the update lock"):
             self.append("提示：更新锁文件未能清理，下次更新前请联系维护人员处理。\n")
+
+    def show_licenses(self):
+        try:
+            from .wbex_updater_licenses import license_text
+        except ImportError:
+            from wbex_updater_licenses import license_text
+        content = license_text()
+        dialog = tk.Toplevel(self.window)
+        dialog.title("许可证与第三方声明")
+        dialog.geometry("{}x{}".format(px(self.window, 850), px(self.window, 550)))
+        dialog.transient(self.window)
+        container, text = text_view(dialog, ("Consolas", 10))
+        container.pack(fill="both", expand=True, padx=16, pady=16)
+        text.insert("1.0", content)
+        text.configure(state="disabled")
+
+        def save():
+            path = filedialog.asksaveasfilename(parent=dialog, title="保存许可证与第三方声明",
+                                               initialfile="THIRD_PARTY_LICENSES.txt",
+                                               defaultextension=".txt")
+            if path:
+                try:
+                    Path(path).write_text(content, encoding="utf-8")
+                except OSError as error:
+                    messagebox.showerror("保存失败", str(error), parent=dialog)
+
+        actions = ttk.Frame(dialog, style="LD.TFrame")
+        actions.pack(fill="x", padx=16, pady=(0, 12))
+        ttk.Button(actions, text="保存…", command=save, style="LD.TButton").pack(side="left")
+        ttk.Button(actions, text="关闭", command=dialog.destroy, style="LD.TButton").pack(side="right")
+        dialog.bind("<Escape>", lambda event: dialog.destroy())
+        scale_widget_tree(dialog)
 
     def show_details(self):
         if self.details_window is not None and self.details_window.winfo_exists():

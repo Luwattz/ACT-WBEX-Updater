@@ -1,0 +1,30 @@
+name: Build and verify Windows release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13.15'
+          architecture: x64
+      - name: Install pinned build dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Run tests
+        run: python -m unittest discover -s tests -p "test_*.py"
+      - name: Build folder distribution
+        run: python tools/build_wbex_updater.py --mode onedir
+      - name: Build single-file distribution
+        run: python tools/build_wbex_updater.py --mode onefile
+      - name: Verify relocated executables and prepare release assets
+        run: python -m tools.verify_wbex_release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: dist/release/*
+          if-no-files-found: error

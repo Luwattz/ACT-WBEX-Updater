@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
+import json
 from importlib import metadata, util
 import os
 from pathlib import Path
@@ -49,6 +51,7 @@ RUNTIME_SOURCES = (
     "update_wbex.py",
     "wbex_updater_runtime.py",
     "wbex_updater_version.py",
+    "wbex_updater_licenses.py",
 )
 RUNTIME_ASSETS = ("updater.ico",)
 EXCLUDED_MODULES = (
@@ -135,6 +138,7 @@ def pyinstaller_command(staged_tools: Path, temporary_root: Path, mode="onedir")
         "--icon", str(staged_tools / "assets" / "wbex-updater" / "updater.ico"),
         "--add-data", str(staged_tools / "assets" / "wbex-updater" / "updater.ico") + os.pathsep + "updater_assets",
         "--add-data", str(temporary_root / "LICENSE.txt") + os.pathsep + "updater_assets",
+        "--add-data", str(temporary_root / "legal") + os.pathsep + "legal",
         # PyInstaller 6.16 embeds inline XML in a single-quoted spec literal.
         "--manifest", DPI_MANIFEST.replace("\n", ""),
         "--paths", str(staged_tools),
@@ -235,6 +239,53 @@ def write_version_info(path: Path):
                     entries + "])]), VarFileInfo([VarStruct('Translation', [1033,1200])])])", encoding="utf-8")
 
 
+def prepare_legal(destination: Path):
+    """Fail closed on stale originals; carry the actual Python distribution license."""
+    source = ROOT / "tools" / "legal"
+    manifest = json.loads((source / "licenses" / "SOURCES.json").read_text(encoding="utf-8"))
+    for name, record in manifest.items():
+        actual = hashlib.sha256((source / "licenses" / name).read_bytes()).hexdigest()
+        if actual != record["sha256"]:
+            raise StandaloneBuildError("Upstream license text changed: " + name)
+    if (source / "LICENSE.txt").read_bytes() != (ROOT / "LICENSE").read_bytes():
+        raise StandaloneBuildError("Bundled project license differs from LICENSE.")
+    installed_license = Path(sys.base_prefix) / "LICENSE.txt"
+    if not installed_license.is_file():
+        raise StandaloneBuildError("Python distribution LICENSE.txt is missing.")
+    if sys.version_info[:3] != (3, 13, 15) or metadata.version("pyinstaller") != "6.16.0":
+        raise StandaloneBuildError("Audited release requires Python 3.13.15 and PyInstaller 6.16.0; "
+                                   "review notices before changing dependencies.")
+    import tkinter
+    import ssl
+    import zlib
+    import pyexpat
+    import _decimal
+    window = tkinter.Tk()
+    window.withdraw()
+    try:
+        tcl_version = window.tk.call("info", "patchlevel")
+        tk_version = window.tk.call("package", "provide", "Tk")
+    finally:
+        window.destroy()
+    components = {"tcl": tcl_version, "tk": tk_version, "openssl": ssl.OPENSSL_VERSION,
+                  "zlib": zlib.ZLIB_RUNTIME_VERSION, "expat": pyexpat.EXPAT_VERSION,
+                  "libmpdec": _decimal.__libmpdec_version__}
+    print("Audited runtime: " + json.dumps(components), flush=True)
+    if (tcl_version != "8.6.15" or tk_version != "8.6.15" or
+            not ssl.OPENSSL_VERSION.startswith("OpenSSL 3.0.21 ") or
+            zlib.ZLIB_RUNTIME_VERSION != "1.3.1" or pyexpat.EXPAT_VERSION != "expat_2.8.2" or
+            _decimal.__libmpdec_version__ != "4.0.0"):
+        raise StandaloneBuildError("Runtime components differ from the audited license inventory.")
+    shutil.copytree(source, destination)
+    shutil.copyfile(installed_license, destination / "licenses" / "Python-installed-LICENSE.txt")
+    info = {"application_version": VERSION, "python": sys.version.split()[0],
+            "components": components, "pyinstaller": metadata.version("pyinstaller"),
+            "python_distribution_license_sha256": hashlib.sha256(installed_license.read_bytes()).hexdigest(),
+            "upstream_license_sha256": {name: record["sha256"] for name, record in manifest.items()}}
+    (destination / "BUILD-INFO.json").write_text(
+        json.dumps(info, indent=2) + "\n", encoding="utf-8")
+
+
 def build_standalone(output_dir: Path = None, mode="onedir"):
     require_build_environment()
     output_dir = Path(output_dir or (FOLDER_OUTPUT if mode == "onedir" else DEFAULT_OUTPUT)).resolve()
@@ -248,6 +299,8 @@ def build_standalone(output_dir: Path = None, mode="onedir"):
         write_version_info(temporary_root / "version-info.txt")
         license_file = temporary_root / "LICENSE.txt"
         shutil.copyfile(ROOT / "LICENSE", license_file)
+        legal = temporary_root / "legal"
+        prepare_legal(legal)
         env = dict(os.environ)
         # Avoid inherited repository paths affecting PyInstaller's import graph.
         env.pop("PYTHONPATH", None)
@@ -271,6 +324,9 @@ def build_standalone(output_dir: Path = None, mode="onedir"):
         if mode == "onedir":
             shutil.copyfile(usage, release / usage.name)
             shutil.copyfile(license_file, release / license_file.name)
+            shutil.copyfile(legal / "THIRD_PARTY_NOTICES.txt", release / "THIRD_PARTY_NOTICES.txt")
+            shutil.copyfile(legal / "BUILD-INFO.json", release / "BUILD-INFO.json")
+            shutil.copytree(legal / "licenses", release / "licenses")
             archive = shutil.make_archive(str(temporary_root / EXE_NAME), "zip",
                                           root_dir=release.parent, base_dir=EXE_NAME)
             publish_folder(release, output_dir / EXE_NAME)
@@ -279,6 +335,9 @@ def build_standalone(output_dir: Path = None, mode="onedir"):
             publish_file(executable, output_dir / executable.name)
             publish_file(usage, output_dir / usage.name)
             publish_file(license_file, output_dir / license_file.name)
+            publish_file(legal / "THIRD_PARTY_NOTICES.txt", output_dir / "THIRD_PARTY_NOTICES.txt")
+            publish_file(legal / "BUILD-INFO.json", output_dir / "BUILD-INFO.json")
+            publish_folder(legal / "licenses", output_dir / "licenses")
     result_path = output_dir / EXE_NAME / (EXE_NAME + ".exe") if mode == "onedir" else output_dir / (EXE_NAME + ".exe")
     notify_shell_update(result_path)
     print("Standalone updater: " + str(result_path))

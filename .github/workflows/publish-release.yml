@@ -1,0 +1,82 @@
+name: Publish verified Windows release
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful Build and verify Windows release run ID
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require a successful release build from main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          [[ "$BUILD_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/$GH_REPO/actions/runs/$BUILD_RUN_ID" > /tmp/build-run.json
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          run = json.loads(Path('/tmp/build-run.json').read_text())
+          assert run['conclusion'] == 'success'
+          assert run['head_branch'] == 'main'
+          assert run['path'] == '.github/workflows/release.yml'
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('BUILD_SHA=' + run['head_sha'] + '\n')
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-release
+          path: release-assets
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - name: Check downloaded assets
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, re
+          from pathlib import Path
+          root = Path('release-assets')
+          info = json.loads((root / 'BUILD-INFO.json').read_text())
+          version = info['application_version']
+          assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version)
+          for line in (root / 'SHA256SUMS.txt').read_text().splitlines():
+              checksum, name = line.split('  ', 1)
+              assert Path(name).name == name
+              assert hashlib.sha256((root / name).read_bytes()).hexdigest() == checksum
+          checks = json.loads((root / 'VERIFICATION.json').read_text())
+          assert {check['layout'] for check in checks} == {'onedir', 'onefile'}
+          for check in checks:
+              assert check['self_check']['ok']
+              assert check['self_check']['third_party_notices_present']
+              assert check['pe_metadata']['FileVersion'] == version
+              assert check['pe_metadata']['ProductVersion'] == version
+          with open(os.environ['GITHUB_ENV'], 'a') as env:
+              env.write('RELEASE_TAG=v' + version + '\n')
+          PY
+      - name: Upload to draft and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BUILD_RUN_ID: ${{ inputs.build_run_id }}
+        run: |
+          # Refuse to replace an already published release.
+          if gh release view "$RELEASE_TAG" --json isDraft > /tmp/release-state.json; then
+            python -c "import json; assert json.load(open('/tmp/release-state.json'))['isDraft'], 'Release already published'"
+          else
+            gh release create "$RELEASE_TAG" --target "$BUILD_SHA" --title "ACT WBEX Updater $RELEASE_TAG" --draft
+          fi
+          gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          cp docs/release-v1.2.1.md /tmp/release-notes.md
+          printf '\n[Windows 构建与验证记录](https://github.com/%s/actions/runs/%s)\n' "$GH_REPO" "$BUILD_RUN_ID" >> /tmp/release-notes.md
+          gh release edit "$RELEASE_TAG" --target "$BUILD_SHA" --notes-file /tmp/release-notes.md --draft=false --latest

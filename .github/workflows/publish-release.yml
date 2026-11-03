@@ -77,6 +77,6 @@ jobs:
             gh release create "$RELEASE_TAG" --target "$BUILD_SHA" --title "ACT WBEX Updater $RELEASE_TAG" --draft
           fi
           gh release upload "$RELEASE_TAG" release-assets/* --clobber
-          cp docs/release-v1.2.1.md /tmp/release-notes.md
+          cp "docs/release-$RELEASE_TAG.md" /tmp/release-notes.md
           printf '\n[Windows 构建与验证记录](https://github.com/%s/actions/runs/%s)\n' "$GH_REPO" "$BUILD_RUN_ID" >> /tmp/release-notes.md
           gh release edit "$RELEASE_TAG" --target "$BUILD_SHA" --notes-file /tmp/release-notes.md --draft=false --latest

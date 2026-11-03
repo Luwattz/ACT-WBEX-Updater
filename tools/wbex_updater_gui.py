@@ -1304,6 +1304,7 @@ class UpdaterApp:
         dialog = tk.Toplevel(self.window)
         dialog.title("许可证与第三方声明")
         dialog.geometry("{}x{}".format(px(self.window, 850), px(self.window, 550)))
+        dialog.configure(background=self.window._ld_palette["background"])
         dialog.transient(self.window)
         container, text = text_view(dialog, ("Consolas", 10))
         container.pack(fill="both", expand=True, padx=16, pady=16)

@@ -248,6 +248,7 @@ class StandaloneUpdaterGuiTests(unittest.TestCase):
         application.show_licenses()
         dialog = next(child for child in self.window.winfo_children()
                       if isinstance(child, tk.Toplevel))
+        self.assertEqual(gui.DARK_COLORS["background"], dialog.cget("background"))
 
         def descend(widget):
             yield widget
@@ -264,7 +265,17 @@ class StandaloneUpdaterGuiTests(unittest.TestCase):
                         and widget["text"] == "保存…")
             save.invoke()
         self.assertEqual(license_text(), target.read_text(encoding="utf-8"))
+        application.theme_fade.render(0.5)
+        self.assertEqual(self.window._ld_palette["background"], dialog.cget("background"))
+        application.theme_fade.to("light", animate=False)
+        self.assertEqual(gui.LIGHT_COLORS["background"], dialog.cget("background"))
+        self.assertEqual(license_text(), text.get("1.0", "end-1c"))
         dialog.destroy()
+        application.show_licenses()
+        reopened = next(child for child in self.window.winfo_children()
+                        if isinstance(child, tk.Toplevel))
+        self.assertEqual(gui.LIGHT_COLORS["background"], reopened.cget("background"))
+        reopened.destroy()
 
     def test_isolated_folder_auto_selects_only_package_and_starts_without_source_or_python(self):
         self.assertEqual([self.package], list(self.root.iterdir()))

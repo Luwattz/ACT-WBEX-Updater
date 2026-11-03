@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.2 — 2026-11-03
+
+- Apply the current theme background when opening the license viewer, removing
+  the light border around its content in dark mode.
+
 ## v1.2.1 — 2026-11-03
 
 - Include original third-party licenses, copyrights and source provenance in
